@@ -1,177 +1,106 @@
-# --------------
-# import the libraries
-import numpy as np
+#Importing header files
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split
-import warnings
-warnings.filterwarnings('ignore')
 
 
-# Code starts here
-df = pd.read_json(path, lines=True)
-# print(df.head)
-df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('(', '').str.replace(')', '')
+#Code starts here
+data = pd.read_csv(path)
+print(data.head())
+data['Rating'].plot(kind='hist')
+plt.show()
 
-print(df.columns)
-missing_data = df.isnull().sum()
-# print(missing_data)
+data = data[data['Rating'] <= 5]
+data['Rating'].plot(kind='hist')
 
-df = df.drop(['waist', 'bust', 'user_name', 'review_text', 'review_summary', 'shoe_size', 'shoe_width'], axis=1)
+#Code ends here
 
-print(df.columns) 
+# code starts here
+total_null = data.isnull().sum()
+percent_null = (total_null/data.isnull().count())
+missing_data = pd.concat([total_null, percent_null], axis=1, keys=['Total', 'Percent'])
+print(missing_data) 
 
+data_1 = data.dropna()
 
-X = df.drop('fit', axis=1)
-y = df['fit']
-print(X.head())
-print(y.head()) 
+total_null_1 = data_1.isnull().sum() 
+percent_null_1 = total_null_1/data_1.isnull().count()
+missing_data_1 = pd.concat([total_null_1, percent_null_1], axis=1, keys=['Total', 'Percent'])
+print(missing_data_1) 
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.33, random_state=6)
+# code ends here
 
 
 
-# Code ends here
+#Code starts here
+a = sns.catplot(x='Category', y='Rating', data=data, kind='box', height=10)
+a.set_xticklabels(rotation=90)
+a.set_titles('Rating vs Category [BoxPlot]')
 
+#Code ends here
 
-# --------------
-def plot_barh(df,col, cmap = None, stacked=False, norm = None):
-    df.plot(kind='barh', colormap=cmap, stacked=stacked)
-    fig = plt.gcf()
-    fig.set_size_inches(24,12)
-    plt.title("Category vs {}-feedback -  cloth {}".format(col, '(Normalized)' if norm else ''), fontsize= 20)
-    plt.ylabel('Category', fontsize = 18)
-    plot = plt.xlabel('Frequency', fontsize=18)
 
+#Importing header files
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 
-# Code starts here
-g_by_category = df.groupby('category')
-print(g_by_category) 
-cat_fit = g_by_category['fit'].value_counts() 
-cat_fit.unstack()
+#Code starts here
+# print(data['Installs'].value_counts())
 
+data['Installs'] = data['Installs'].str.replace('+','').str.replace(',', '') 
+data.sort_values('Installs')
+print(data['Installs'])
 
-cat_fit.plot.bar(rot=45) 
+data['Installs'] = data['Installs'].astype(int)
+le = LabelEncoder()
+le.fit(data['Installs'])
+data['Installs']=le.transform(data['Installs']) 
 
-# Code ends here
 
+a = sns.regplot(x='Installs', y='Rating', data=data)
+a.set_title('Rating vs Installs [RegPlot]') 
 
-# --------------
-# Code starts here
-cat_len = g_by_category.length.value_counts()
-cat_len = cat_len.unstack()
-plot_barh(cat_len, 'length') 
 
+#Code ends here
 
-# Code ends here
+#Code starts here
+print(data['Price'].value_counts())
+data['Price'] = data['Price'].str.replace('$','')
+data.sort_values('Price')
+print(data['Price'])
 
+data['Price'] = data['Price'].astype(float)
+a = sns.regplot(x='Price', y='Rating', data=data)
+a.set_title('Rating vs Price [RegPlot]') 
 
-# --------------
-# Code starts here
+#Code ends here
 
+#Code starts here
+a = data['Genres'].unique()
+data['Genres'] = data['Genres'].str.split(';', n=1, expand=True)
+# print(data['Genres'].head())
 
 
+gr_mean = data.groupby(['Genres'], as_index=False)['Rating'].mean() 
+print(gr_mean.describe())
+gr_mean = gr_mean.sort_values(['Rating']) 
+print(gr_mean.head(1), gr_mean.tail(1)) 
 
+#Code ends here 
 
+#Code starts here
+# print(data['Last Updated'])
 
-def get_cms(x):
-    if type(x) == type(1.0):
-        return
+data['Last Updated'] =  pd.to_datetime(data['Last Updated'])
+# print(data['Last Updated']) 
 
-    try: 
-        return (int(x[0])*30.48) + (int(x[4:-2])*2.54)
-    except:
-        return (int(x[0])*30.48)
-        
 
+max_date = data['Last Updated'].max()
+print(max_date) 
 
-X_train.height = X_train['height'].apply(get_cms) 
-X_test.height = X_test['height'].apply(get_cms) 
+data['Last Updated Days'] = (max_date - data['Last Updated']).dt.days
+print(data['Last Updated Days'])
 
-# print(X_train.height)
+ax = sns.regplot(x='Last Updated Days', y='Rating', data=data)
 
-
-
-# Code ends here
-
-
-# --------------
-# Code starts here
-X_train.isnull()
-
-X_train.dropna(subset=['height','length','quality']) 
-X_test.dropna(subset = ['height','length','quality'])
-
-
-y_train.dropna()
-y_test.dropna()
-
-X_train[['bra_size', 'hips']].fillna(X_train.mean()) 
-X_test[['bra_size', 'hips']].fillna(X_test.mean())
-mode_1 = X_train['cup_size'].mode()[0]
-mode_2 = X_test['cup_size'].mode()[0]
-
-X_train['cup_size'].fillna(mode_1)
-X_test['cup_size'].fillna(mode_2)
-
-
-
-
-# Code ends here
-
-
-# --------------
-# Code starts here
-# X_train = pd.get_dummies(data=X_train, columns = ['category', 'cup_size', 'length'], prefix=["category", "cup_size","length"])
-
-
-X_train = pd.get_dummies(data=X_train,columns=["category", "cup_size","length"],prefix=["category", "cup_size","length"])
-
-
-
-X_test = pd.get_dummies(data=X_test,columns=["category", "cup_size","length"],prefix=["category", "cup_size","length"])
-
-# X_test = pd.get_dummies(data=X_test, columns = ['category', 'cup_size', 'length'], prefix=["category", "cup_size","length"]) 
-# Code ends here
-
-
-# --------------
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import precision_score
-from sklearn.metrics import accuracy_score
-
-
-
-# Code starts here
-model = DecisionTreeClassifier(random_state = 6)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-score = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred, average=None) 
-
-
-# Code ends here
-
-
-# --------------
-from sklearn.model_selection import GridSearchCV
-from sklearn.tree import DecisionTreeClassifier
-
-
-# parameters for grid search
-parameters = {'max_depth':[5,10],'criterion':['gini','entropy'],'min_samples_leaf':[0.5,1]}
-
-# Code starts here
-model = DecisionTreeClassifier(random_state=6)
-grid = GridSearchCV(estimator=model, param_grid=parameters)
-
-grid.fit(X_train, y_train)
-y_pred = grid.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred) 
-
-print(accuracy) 
-# Code ends here
-
-
+ax.set_title('Rating vs Last Updated [RegPlot]') 
+#Code ends here
